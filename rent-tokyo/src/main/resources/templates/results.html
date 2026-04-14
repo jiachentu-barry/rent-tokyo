@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>検索結果一覧</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header>
+    <div class="wrap">
+        <h1>検索結果一覧</h1>
+        <p>条件に合う物件を並び替え・比較できます。</p>
+    </div>
+</header>
+<main class="wrap">
+    <section class="panel">
+        <div class="toolbar">
+            <div>
+                <h2>検索結果</h2>
+                <div id="summary" class="summary">読み込み中...</div>
+            </div>
+            <div class="toolbar-actions">
+                <label for="sortSelect">並び替え</label>
+                <select id="sortSelect">
+                    <option value="rentAsc">家賃が安い順</option>
+                    <option value="rentDesc">家賃が高い順</option>
+                    <option value="walkAsc">駅から近い順</option>
+                </select>
+                <a class="secondary-link" href="/">条件を変更</a>
+            </div>
+        </div>
+
+        <div class="compare-panel">
+            <div class="compare-title">比較候補</div>
+            <div class="summary">最寄り駅・徒歩時間も比較表示します。</div>
+            <div id="compareList" class="compare-list">まだ選択されていません。</div>
+        </div>
+
+        <div id="results" class="result-list"></div>
+        <div id="pager" class="pager"></div>
+    </section>
+</main>
+<script src="/js/api.js" defer></script>
+<script src="/js/results.js" defer></script>
+</body>
+</html>

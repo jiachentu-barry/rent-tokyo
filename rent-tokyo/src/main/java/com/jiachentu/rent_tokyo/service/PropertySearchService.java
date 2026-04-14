@@ -6,6 +6,7 @@ import com.jiachentu.rent_tokyo.entity.Property;
 import com.jiachentu.rent_tokyo.repository.PropertyRepository;
 import jakarta.persistence.criteria.Predicate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -38,7 +39,15 @@ public class PropertySearchService {
             List<Predicate> predicates = new ArrayList<>();
 
             if (hasText(request.getWard())) {
-                predicates.add(cb.equal(root.get("ward"), request.getWard().trim()));
+                List<String> wards = Arrays.stream(request.getWard().split(","))
+                        .map(String::trim)
+                        .filter(this::hasText)
+                        .distinct()
+                        .toList();
+
+                if (!wards.isEmpty()) {
+                    predicates.add(root.get("ward").in(wards));
+                }
             }
             if (request.getRentMin() != null) {
                 predicates.add(cb.greaterThanOrEqualTo(root.get("rent"), request.getRentMin()));
@@ -51,6 +60,9 @@ public class PropertySearchService {
             }
             if (request.getWalkMinutesMax() != null) {
                 predicates.add(cb.lessThanOrEqualTo(root.get("walkMinutes"), request.getWalkMinutesMax()));
+            }
+            if (Boolean.TRUE.equals(request.getHasPriceChanges())) {
+                predicates.add(cb.isNotEmpty(root.get("changeLogs")));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));

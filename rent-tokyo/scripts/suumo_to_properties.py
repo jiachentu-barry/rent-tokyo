@@ -76,6 +76,21 @@ def normalize_space(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+def normalize_address_key(address: Optional[str]) -> str:
+    if not address:
+        return ""
+
+    normalized = normalize_space(str(address))
+    normalized = re.sub(r"[　\s]+", "", normalized)
+    normalized = re.sub(r"[−ー―‐]+", "-", normalized)
+    normalized = normalized.replace("丁目", "-")
+    normalized = normalized.replace("番地", "-")
+    normalized = normalized.replace("番", "-")
+    normalized = normalized.replace("号", "")
+    normalized = re.sub(r"-{2,}", "-", normalized)
+    return normalized.strip("-").lower()
+
+
 def parse_yen(text: Optional[str]) -> Optional[int]:
     if not text:
         return None
@@ -220,58 +235,108 @@ def connect_db(args: argparse.Namespace):
     return psycopg2.connect(host=host, port=port, dbname=db_name, user=user, password=password)
 
 
-def insert_records(conn, records: List[ListingRecord], dry_run: bool) -> Tuple[int, int]:
+def insert_records(conn, records: List[ListingRecord], dry_run: bool) -> Tuple[int, int, int, int]:
     inserted = 0
+    updated = 0
     skipped = 0
+    price_changes_logged = 0
     now = datetime.now()
 
     with conn.cursor() as cur:
-        for rec in records:
-            cur.execute(
-                """
-                SELECT id
-                FROM properties
-                WHERE name = %s
-                  AND address = %s
-                  AND COALESCE(ward, '') = COALESCE(%s, '')
-                  AND COALESCE(nearest_station, '') = COALESCE(%s, '')
-                  AND walk_minutes IS NOT DISTINCT FROM %s
-                  AND COALESCE(layout, '') = COALESCE(%s, '')
-                  AND (
-                        (area_sqm IS NULL AND %s IS NULL)
-                     OR (area_sqm IS NOT NULL AND %s IS NOT NULL AND ABS(area_sqm - %s) < 0.01)
-                  )
-                  AND built_year IS NOT DISTINCT FROM %s
-                  AND rent = %s
-                  AND management_fee IS NOT DISTINCT FROM %s
-                  AND deposit IS NOT DISTINCT FROM %s
-                  AND key_money IS NOT DISTINCT FROM %s
-                LIMIT 1
-                """,
-                (
-                    rec.name,
-                    rec.address,
-                    rec.ward,
-                    rec.nearest_station,
-                    rec.walk_minutes,
-                    rec.layout,
-                    rec.area_sqm,
-                    rec.area_sqm,
-                    rec.area_sqm,
-                    rec.built_year,
-                    rec.rent,
-                    rec.management_fee,
-                    rec.deposit,
-                    rec.key_money,
-                ),
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS property_change_logs (
+                id BIGSERIAL PRIMARY KEY,
+                property_id BIGINT NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+                old_rent INTEGER,
+                new_rent INTEGER,
+                detected_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
-            exists = cur.fetchone()
-            if exists:
+            """
+        )
+
+        cur.execute("SELECT id, address, rent FROM properties ORDER BY id")
+        existing_by_address: Dict[str, Tuple[int, Optional[int]]] = {}
+        for property_id, address, rent in cur.fetchall():
+            key = normalize_address_key(address)
+            if key and key not in existing_by_address:
+                existing_by_address[key] = (property_id, rent)
+
+        seen_address_keys = set()
+
+        for rec in records:
+            address_key = normalize_address_key(rec.address)
+            if not address_key:
                 skipped += 1
                 continue
 
+            if address_key in seen_address_keys:
+                skipped += 1
+                continue
+
+            existing_entry = existing_by_address.get(address_key)
+
             if dry_run:
-                inserted += 1
+                if existing_entry:
+                    updated += 1
+                    if existing_entry[1] != rec.rent:
+                        price_changes_logged += 1
+                else:
+                    inserted += 1
+                seen_address_keys.add(address_key)
+                continue
+
+            if existing_entry:
+                existing_id, existing_rent = existing_entry
+
+                if existing_rent != rec.rent:
+                    cur.execute(
+                        """
+                        INSERT INTO property_change_logs (property_id, old_rent, new_rent, detected_at)
+                        VALUES (%s, %s, %s, %s)
+                        """,
+                        (existing_id, existing_rent, rec.rent, now),
+                    )
+                    price_changes_logged += 1
+
+                cur.execute(
+                    """
+                    UPDATE properties
+                    SET name = %s,
+                        address = %s,
+                        ward = %s,
+                        nearest_station = %s,
+                        walk_minutes = %s,
+                        layout = %s,
+                        area_sqm = %s,
+                        built_year = %s,
+                        rent = %s,
+                        management_fee = %s,
+                        deposit = %s,
+                        key_money = %s,
+                        source_url = %s
+                    WHERE id = %s
+                    """,
+                    (
+                        rec.name,
+                        rec.address,
+                        rec.ward,
+                        rec.nearest_station,
+                        rec.walk_minutes,
+                        rec.layout,
+                        rec.area_sqm,
+                        rec.built_year,
+                        rec.rent,
+                        rec.management_fee,
+                        rec.deposit,
+                        rec.key_money,
+                        rec.source_url,
+                        existing_id,
+                    ),
+                )
+                existing_by_address[address_key] = (existing_id, rec.rent)
+                updated += 1
+                seen_address_keys.add(address_key)
                 continue
 
             cur.execute(
@@ -286,6 +351,7 @@ def insert_records(conn, records: List[ListingRecord], dry_run: bool) -> Tuple[i
                     %s, %s, %s, %s, %s,
                     %s, %s, %s, %s
                 )
+                RETURNING id
                 """,
                 (
                     rec.name,
@@ -304,12 +370,15 @@ def insert_records(conn, records: List[ListingRecord], dry_run: bool) -> Tuple[i
                     now,
                 ),
             )
+            property_id = cur.fetchone()[0]
+            existing_by_address[address_key] = (property_id, rec.rent)
+            seen_address_keys.add(address_key)
             inserted += 1
 
     if not dry_run:
         conn.commit()
 
-    return inserted, skipped
+    return inserted, updated, skipped, price_changes_logged
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -374,13 +443,16 @@ def main() -> int:
 
     try:
         with connect_db(args) as conn:
-            inserted, skipped = insert_records(conn, all_records, args.dry_run)
+            inserted, updated, skipped, price_changes_logged = insert_records(conn, all_records, args.dry_run)
     except Exception as exc:  # pylint: disable=broad-except
         print(f"DB write failed: {exc}", file=sys.stderr)
         return 1
 
     mode = "DRY-RUN" if args.dry_run else "WRITE"
-    print(f"{mode} finished. inserted={inserted}, skipped={skipped}")
+    print(
+        f"{mode} finished. inserted={inserted}, updated={updated}, skipped={skipped}, "
+        f"price_changes_logged={price_changes_logged}"
+    )
     return 0
 
 

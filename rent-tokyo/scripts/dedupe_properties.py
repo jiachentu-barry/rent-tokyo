@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Remove exact duplicate rows from the properties table while keeping the oldest record."""
+"""Remove duplicate properties by address while keeping the oldest record."""
 
 from __future__ import annotations
 
@@ -8,6 +8,8 @@ import re
 from typing import Tuple
 
 import psycopg2
+
+from suumo_to_properties import normalize_address_key
 
 JDBC_PATTERN = re.compile(r"^jdbc:postgresql://(?P<host>[^/:?#]+)(?::(?P<port>\d+))?/(?P<db>[^?]+)")
 
@@ -33,44 +35,54 @@ def get_connection():
 def main() -> int:
     with get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("select count(*) from properties")
-            before_total = cur.fetchone()[0]
+            cur.execute("select id, address from properties order by id")
+            rows = cur.fetchall()
+            before_total = len(rows)
+
+            seen_addresses = set()
+            delete_ids = []
+
+            for property_id, address in rows:
+                address_key = normalize_address_key(address)
+                if not address_key:
+                    continue
+                if address_key in seen_addresses:
+                    delete_ids.append(property_id)
+                else:
+                    seen_addresses.add(address_key)
+
+            duplicate_rows = len(delete_ids)
+            deleted = 0
+            if delete_ids:
+                cur.execute("delete from properties where id = any(%s)", (delete_ids,))
+                deleted = cur.rowcount
 
             cur.execute(
                 """
-                select coalesce(sum(cnt - 1), 0)
-                from (
-                    select count(*) as cnt
-                    from properties
-                    group by name, address, ward, nearest_station, walk_minutes,
-                             layout, area_sqm, built_year, rent, management_fee,
-                             deposit, key_money
-                    having count(*) > 1
-                ) t
-                """
-            )
-            duplicate_rows = cur.fetchone()[0]
-
-            cur.execute(
-                """
-                with ranked as (
-                    select id,
-                           row_number() over (
-                               partition by name, address, ward, nearest_station,
-                                            walk_minutes, layout, area_sqm,
-                                            built_year, rent, management_fee,
-                                            deposit, key_money
-                               order by id
-                           ) as rn
-                    from properties
+                create unique index if not exists uk_properties_normalized_address
+                on properties (
+                    lower(
+                        trim(both '-' from regexp_replace(
+                            replace(
+                                replace(
+                                    replace(
+                                        replace(
+                                            regexp_replace(coalesce(address, ''), '[　\s]+', '', 'g'),
+                                            '丁目', '-'
+                                        ),
+                                        '番地', '-'
+                                    ),
+                                    '番', '-'
+                                ),
+                                '号', ''
+                            ),
+                            '[−ー―‐]+', '-', 'g'
+                        ))
+                    )
                 )
-                delete from properties p
-                using ranked r
-                where p.id = r.id
-                  and r.rn > 1
+                where coalesce(address, '') <> ''
                 """
             )
-            deleted = cur.rowcount
             conn.commit()
 
             cur.execute("select count(*) from properties")

@@ -4,15 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>物件詳細</title>
-    <link rel="stylesheet" href="/css/app.css">
+    <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 <div class="page-wrap">
-    <p><a class="back-link" href="/">← 一覧に戻る</a></p>
+    <p><a class="back-link" href="/results">← 検索結果に戻る</a></p>
     <section class="panel">
         <h1 id="name">物件詳細</h1>
         <div id="rent" class="hero-rent">読み込み中...</div>
         <div class="detail-grid" id="info"></div>
+    </section>
+
+    <section class="panel">
+        <h2>初期費用</h2>
+        <div id="initialCost" class="value">読み込み中...</div>
+        <p><a id="sourceUrl" class="source-link" href="#" target="_blank" rel="noopener">SUUMO掲載ページ</a></p>
     </section>
 
     <section class="panel">
@@ -32,6 +38,7 @@
         </table>
     </section>
 </div>
+<script src="/js/api.js" defer></script>
 <script src="/js/detail.js" defer></script>
 </body>
 </html>

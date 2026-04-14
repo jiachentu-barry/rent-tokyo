@@ -49,14 +49,49 @@ h1, h2, h3, p {
     margin: 18px 0;
 }
 
-.grid {
+.grid, .detail-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 12px;
+}
+
+.grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.detail-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 .full-span {
     grid-column: 1 / -1;
+}
+
+label {
+    font-size: 14px;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 6px;
+}
+
+input, select, button {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    font-size: 14px;
+}
+
+button {
+    background: var(--primary);
+    color: white;
+    border: none;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+button:disabled {
+    opacity: .5;
+    cursor: not-allowed;
 }
 
 .ward-panel {
@@ -76,67 +111,40 @@ h1, h2, h3, p {
     border: 1px solid #bfdbfe;
     background: white;
     color: var(--primary-dark);
-    font-weight: 600;
 }
 
 .ward-chip.active {
     background: var(--primary);
     color: white;
-    border-color: var(--primary);
 }
 
-.detail-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 12px;
-}
-
-label {
-    font-size: 14px;
-    color: var(--muted);
-    display: block;
-    margin-bottom: 6px;
-}
-
-input, select, button {
-    width: 100%;
-    padding: 10px 12px;
-    border-radius: 10px;
-    border: 1px solid #cbd5e1;
-    font-size: 14px;
-}
-
-.check-option {
+.check-option, .compare-check {
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+.check-option {
     padding: 10px 12px;
     border: 1px solid #cbd5e1;
     border-radius: 10px;
     background: #f8fafc;
-    color: var(--text);
 }
 
-.check-option input {
+.check-option input,
+.compare-check input {
     width: auto;
     margin: 0;
 }
 
-button {
-    background: var(--primary);
-    color: white;
-    border: none;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-button:hover {
-    opacity: .95;
+.summary, .meta, .label, .empty {
+    color: var(--muted);
 }
 
 .result-list {
     display: grid;
     gap: 14px;
+    margin-top: 16px;
 }
 
 .card {
@@ -146,37 +154,36 @@ button:hover {
     background: white;
 }
 
-.meta,
-.summary,
-.label,
-.empty {
-    color: var(--muted);
+.card-top, .toolbar {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
 }
 
-.meta {
-    font-size: 13px;
-    margin: 6px 0;
+.toolbar-actions {
+    min-width: 220px;
 }
 
-.rent {
-    font-size: 22px;
-    font-weight: bold;
-    color: var(--danger);
-}
-
-.hero-rent {
-    font-size: 28px;
+.rent, .hero-rent {
     font-weight: 700;
     color: var(--danger);
 }
 
-.actions a,
-.back-link {
+.rent {
+    font-size: 22px;
+}
+
+.hero-rent {
+    font-size: 28px;
+}
+
+.actions a, .back-link, .secondary-link, .source-link {
     display: inline-block;
     text-decoration: none;
 }
 
-.actions a {
+.actions a, .source-link {
     margin-top: 10px;
     color: white;
     background: var(--accent);
@@ -184,15 +191,32 @@ button:hover {
     border-radius: 8px;
 }
 
-.back-link {
+.back-link, .secondary-link {
     color: var(--primary);
-    margin-bottom: 8px;
 }
 
-.info-item {
+.info-item, .compare-panel {
     background: #f8fafc;
     border-radius: 10px;
     padding: 10px;
+}
+
+.compare-title {
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.compare-list {
+    display: grid;
+    gap: 8px;
+}
+
+.compare-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 8px;
 }
 
 .value {
@@ -210,4 +234,21 @@ button:hover {
     padding: 10px;
     border-bottom: 1px solid #e2e8f0;
     text-align: left;
+}
+
+.pager {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+@media (max-width: 768px) {
+    .toolbar,
+    .card-top,
+    .compare-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
 }

@@ -15,6 +15,7 @@ import org.springframework.web.context.WebApplicationContext;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -83,6 +84,47 @@ class PropertySearchApiTest {
     }
 
     @Test
+    void search_shouldSupportMultipleWardsInSingleRequest() throws Exception {
+        propertyRepository.save(Property.builder()
+                .name("Shibuya Select Mansion")
+                .address("Tokyo Shibuya")
+                .ward("渋谷区")
+                .layout("1K")
+                .rent(98000)
+                .walkMinutes(8)
+                .build());
+
+        mockMvc.perform(get("/api/properties/search")
+                        .param("ward", "港区,渋谷区")
+                        .param("page", "0")
+                        .param("size", "10")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2));
+    }
+
+    @Test
+    void search_shouldFilterPropertiesWithPriceChangesOnly() throws Exception {
+        propertyRepository.save(Property.builder()
+                .name("Stable Mansion")
+                .address("Tokyo Chuo")
+                .ward("中央区")
+                .layout("1K")
+                .rent(99000)
+                .walkMinutes(7)
+                .build());
+
+        mockMvc.perform(get("/api/properties/search")
+                        .param("hasPriceChanges", "true")
+                        .param("page", "0")
+                        .param("size", "10")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].name").value("Price Track Mansion"));
+    }
+
+    @Test
     void priceHistoryApi_shouldReturnPriceChangesForProperty() throws Exception {
         mockMvc.perform(get("/api/properties/{propertyId}/price-history", propertyId)
                         .accept(MediaType.APPLICATION_JSON))
@@ -106,6 +148,24 @@ class PropertySearchApiTest {
     @Test
     void homePage_shouldRenderSearchListUi() throws Exception {
         mockMvc.perform(get("/").accept(MediaType.TEXT_HTML))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("区の絞り込み（複数選択可）")));
+    }
+
+    @Test
+    void resultsPage_shouldRenderSortAndCompareUi() throws Exception {
+        mockMvc.perform(get("/results").accept(MediaType.TEXT_HTML))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("並び替え")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("比較候補")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("最寄り駅・徒歩時間")));
+    }
+
+    @Test
+    void detailPage_shouldRenderInitialCostAndSuumoLinkSection() throws Exception {
+        mockMvc.perform(get("/detail").accept(MediaType.TEXT_HTML))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("初期費用")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("SUUMO掲載ページ")));
     }
 }

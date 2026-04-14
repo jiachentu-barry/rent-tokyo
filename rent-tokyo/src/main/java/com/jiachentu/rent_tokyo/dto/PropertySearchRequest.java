@@ -12,6 +12,7 @@ public class PropertySearchRequest {
     private Integer rentMax;
     private String layout;
     private Integer walkMinutesMax;
+    private Boolean hasPriceChanges;
     private int page = 0;
     private int size = 20;
 }

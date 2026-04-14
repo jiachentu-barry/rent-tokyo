@@ -3,42 +3,72 @@ const nameEl = document.getElementById('name');
 const rentEl = document.getElementById('rent');
 const infoEl = document.getElementById('info');
 const historyBody = document.getElementById('historyBody');
+const initialCostEl = document.getElementById('initialCost');
+const sourceUrlEl = document.getElementById('sourceUrl');
 
 function row(label, value) {
     return `<div class="info-item"><div class="label">${label}</div><div class="value">${value ?? '-'}</div></div>`;
+}
+
+function formatDateTime(value) {
+    if (!value) return '-';
+
+    const normalized = String(value).replace('T', ' ');
+    const match = normalized.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/);
+    if (match) {
+        return `${match[1]} ${match[2]}`;
+    }
+
+    return normalized.slice(0, 16);
+}
+
+function formatYen(value) {
+    return value != null ? `¥${Number(value).toLocaleString()}` : '-';
+}
+
+function estimateInitialCost(detail) {
+    const total = [detail.rent, detail.managementFee, detail.deposit, detail.keyMoney]
+        .reduce((sum, value) => sum + (Number(value) || 0), 0);
+    return total > 0 ? `概算 ${formatYen(total)}` : 'データなし';
 }
 
 async function load() {
     if (!id) {
         nameEl.textContent = '物件IDが指定されていません';
         rentEl.textContent = '-';
+        initialCostEl.textContent = 'データがありません。';
         historyBody.innerHTML = '<tr><td colspan="4">データがありません。</td></tr>';
         return;
     }
 
     try {
-        const [detailRes, historyRes] = await Promise.all([
-            fetch(`/api/properties/${id}`),
-            fetch(`/api/properties/${id}/price-history`)
+        const [detail, history] = await Promise.all([
+            window.PropertyApi.fetchPropertyDetail(id),
+            window.PropertyApi.fetchPriceHistory(id)
         ]);
 
-        if (!detailRes.ok) throw new Error('物件詳細の取得に失敗しました');
-        if (!historyRes.ok) throw new Error('価格履歴の取得に失敗しました');
-
-        const detail = await detailRes.json();
-        const history = await historyRes.json();
-
         nameEl.textContent = detail.name || '物件詳細';
-        rentEl.textContent = `¥${(detail.rent || 0).toLocaleString()}`;
+        rentEl.textContent = formatYen(detail.rent || 0);
+        initialCostEl.textContent = estimateInitialCost(detail);
+
+        if (detail.sourceUrl) {
+            sourceUrlEl.href = detail.sourceUrl;
+        } else {
+            sourceUrlEl.removeAttribute('href');
+            sourceUrlEl.textContent = 'SUUMO掲載ページなし';
+        }
+
         infoEl.innerHTML = [
             row('住所', detail.address),
-            row('区', detail.ward),
-            row('最寄駅', detail.nearestStation),
+            row('エリア', detail.ward),
+            row('最寄り駅', detail.nearestStation),
             row('徒歩', detail.walkMinutes != null ? `${detail.walkMinutes}分` : '-'),
             row('間取り', detail.layout),
             row('面積', detail.areaSqm != null ? `${detail.areaSqm}㎡` : '-'),
-            row('築年', detail.builtYear),
-            row('管理費', detail.managementFee != null ? `¥${detail.managementFee.toLocaleString()}` : '-')
+            row('築年数', detail.builtYear),
+            row('管理費', formatYen(detail.managementFee)),
+            row('敷金', formatYen(detail.deposit)),
+            row('礼金', formatYen(detail.keyMoney))
         ].join('');
 
         if (!history.length) {
@@ -48,15 +78,16 @@ async function load() {
 
         historyBody.innerHTML = history.map(item => `
             <tr>
-                <td>${item.detectedAt ? item.detectedAt.replace('T', ' ') : '-'}</td>
-                <td>${item.oldRent != null ? '¥' + item.oldRent.toLocaleString() : '-'}</td>
-                <td>${item.newRent != null ? '¥' + item.newRent.toLocaleString() : '-'}</td>
-                <td>${item.changeAmount != null ? '¥' + item.changeAmount.toLocaleString() : '-'}</td>
+                <td>${formatDateTime(item.detectedAt)}</td>
+                <td>${formatYen(item.oldRent)}</td>
+                <td>${formatYen(item.newRent)}</td>
+                <td>${formatYen(item.changeAmount)}</td>
             </tr>
         `).join('');
     } catch (err) {
         nameEl.textContent = '読み込みエラー';
         rentEl.textContent = '-';
+        initialCostEl.textContent = '-';
         historyBody.innerHTML = `<tr><td colspan="4">${err.message}</td></tr>`;
     }
 }

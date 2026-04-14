@@ -4,22 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>東京賃貸検索</title>
-    <link rel="stylesheet" href="/css/app.css">
+    <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 <header>
     <div class="wrap">
         <h1>東京賃貸検索</h1>
-        <p>エリア・家賃・間取りから物件を検索できます。</p>
+        <p>区・家賃・間取り・徒歩分から条件を絞り込めます。</p>
     </div>
 </header>
 <main class="wrap">
     <section class="panel">
-        <h2>検索条件</h2>
+        <h2>検索フォーム</h2>
         <form id="searchForm" class="grid">
-            <div>
-                <label for="ward">区</label>
-                <input id="ward" name="ward" placeholder="例: 渋谷区">
+            <div class="full-span">
+                <label for="wardPanel">区の絞り込み（複数選択可）</label>
+                <div id="wardPanel" class="ward-panel" aria-label="区の絞り込み"></div>
+                <input id="ward" name="ward" type="hidden">
             </div>
             <div>
                 <label for="rentMin">家賃下限</label>
@@ -34,8 +35,15 @@
                 <input id="layout" name="layout" placeholder="例: 1K / 1LDK">
             </div>
             <div>
-                <label for="walkMinutesMax">徒歩分数以内</label>
+                <label for="walkMinutesMax">徒歩分以内</label>
                 <input id="walkMinutesMax" name="walkMinutesMax" type="number" placeholder="10">
+            </div>
+            <div>
+                <label for="hasPriceChanges">価格変動</label>
+                <label class="check-option">
+                    <input id="hasPriceChanges" name="hasPriceChanges" type="checkbox" value="true">
+                    <span>価格変動がある物件のみ</span>
+                </label>
             </div>
             <div>
                 <label for="size">表示件数</label>
@@ -46,17 +54,17 @@
                 </select>
             </div>
             <div style="align-self:end;">
-                <button type="submit">検索する</button>
+                <button type="submit">検索結果を見る</button>
             </div>
         </form>
     </section>
 
     <section class="panel">
-        <h2>物件一覧</h2>
-        <div id="summary" class="summary">条件を入力して検索してください。</div>
-        <div id="results" class="result-list"></div>
+        <h2>使い方</h2>
+        <p class="summary">条件を入力すると、検索結果一覧ページで並び替え・ページ送り・比較選択ができます。</p>
     </section>
 </main>
-<script src="/js/index.js" defer></script>
+<script src="/js/api.js" defer></script>
+<script src="/js/search.js" defer></script>
 </body>
 </html>

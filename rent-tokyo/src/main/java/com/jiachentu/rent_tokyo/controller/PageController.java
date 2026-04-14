@@ -11,6 +11,11 @@ public class PageController {
         return "index";
     }
 
+    @GetMapping("/results")
+    public String results() {
+        return "results";
+    }
+
     @GetMapping("/detail")
     public String detail() {
         return "detail";
