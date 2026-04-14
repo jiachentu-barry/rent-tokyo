@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>東京賃貸検索</title>
+    <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<header>
+    <div class="wrap">
+        <h1>東京賃貸検索</h1>
+        <p>エリア・家賃・間取りから物件を検索できます。</p>
+    </div>
+</header>
+<main class="wrap">
+    <section class="panel">
+        <h2>検索条件</h2>
+        <form id="searchForm" class="grid">
+            <div>
+                <label for="ward">区</label>
+                <input id="ward" name="ward" placeholder="例: 渋谷区">
+            </div>
+            <div>
+                <label for="rentMin">家賃下限</label>
+                <input id="rentMin" name="rentMin" type="number" placeholder="80000">
+            </div>
+            <div>
+                <label for="rentMax">家賃上限</label>
+                <input id="rentMax" name="rentMax" type="number" placeholder="150000">
+            </div>
+            <div>
+                <label for="layout">間取り</label>
+                <input id="layout" name="layout" placeholder="例: 1K / 1LDK">
+            </div>
+            <div>
+                <label for="walkMinutesMax">徒歩分数以内</label>
+                <input id="walkMinutesMax" name="walkMinutesMax" type="number" placeholder="10">
+            </div>
+            <div>
+                <label for="size">表示件数</label>
+                <select id="size" name="size">
+                    <option value="10">10件</option>
+                    <option value="20" selected>20件</option>
+                    <option value="50">50件</option>
+                </select>
+            </div>
+            <div style="align-self:end;">
+                <button type="submit">検索する</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="panel">
+        <h2>物件一覧</h2>
+        <div id="summary" class="summary">条件を入力して検索してください。</div>
+        <div id="results" class="result-list"></div>
+    </section>
+</main>
+<script src="/js/index.js" defer></script>
+</body>
+</html>

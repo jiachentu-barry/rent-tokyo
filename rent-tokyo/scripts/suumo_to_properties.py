@@ -128,7 +128,7 @@ def parse_nearest_station_and_walk_minutes(card: BeautifulSoup) -> Tuple[Optiona
 
 
 def extract_ward(address: str) -> Optional[str]:
-    match = re.search(r"([^\s,，]{1,20}区)", address)
+    match = re.search(r"(?:東京都)?([^\s,，]{1,20}区)", address)
     return match.group(1) if match else None
 
 
@@ -227,26 +227,44 @@ def insert_records(conn, records: List[ListingRecord], dry_run: bool) -> Tuple[i
 
     with conn.cursor() as cur:
         for rec in records:
-            if rec.source_url:
-                cur.execute(
-                    """
-                    SELECT id
-                    FROM properties
-                    WHERE source_url = %s
-                    LIMIT 1
-                    """,
-                    (rec.source_url,),
-                )
-            else:
-                cur.execute(
-                    """
-                    SELECT id
-                    FROM properties
-                    WHERE name = %s AND address = %s AND rent = %s
-                    LIMIT 1
-                    """,
-                    (rec.name, rec.address, rec.rent),
-                )
+            cur.execute(
+                """
+                SELECT id
+                FROM properties
+                WHERE name = %s
+                  AND address = %s
+                  AND COALESCE(ward, '') = COALESCE(%s, '')
+                  AND COALESCE(nearest_station, '') = COALESCE(%s, '')
+                  AND walk_minutes IS NOT DISTINCT FROM %s
+                  AND COALESCE(layout, '') = COALESCE(%s, '')
+                  AND (
+                        (area_sqm IS NULL AND %s IS NULL)
+                     OR (area_sqm IS NOT NULL AND %s IS NOT NULL AND ABS(area_sqm - %s) < 0.01)
+                  )
+                  AND built_year IS NOT DISTINCT FROM %s
+                  AND rent = %s
+                  AND management_fee IS NOT DISTINCT FROM %s
+                  AND deposit IS NOT DISTINCT FROM %s
+                  AND key_money IS NOT DISTINCT FROM %s
+                LIMIT 1
+                """,
+                (
+                    rec.name,
+                    rec.address,
+                    rec.ward,
+                    rec.nearest_station,
+                    rec.walk_minutes,
+                    rec.layout,
+                    rec.area_sqm,
+                    rec.area_sqm,
+                    rec.area_sqm,
+                    rec.built_year,
+                    rec.rent,
+                    rec.management_fee,
+                    rec.deposit,
+                    rec.key_money,
+                ),
+            )
             exists = cur.fetchone()
             if exists:
                 skipped += 1

@@ -12,13 +12,21 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
 public class PropertySearchService {
 
     private final PropertyRepository propertyRepository;
+
+    public PropertySearchResponse getById(Long propertyId) {
+        Property property = propertyRepository.findById(propertyId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Property not found"));
+        return PropertySearchResponse.from(property);
+    }
 
     public Page<PropertySearchResponse> search(PropertySearchRequest request) {
         int page = Math.max(request.getPage(), 0);

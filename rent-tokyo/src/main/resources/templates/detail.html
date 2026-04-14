@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>物件詳細</title>
+    <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<div class="page-wrap">
+    <p><a class="back-link" href="/">← 一覧に戻る</a></p>
+    <section class="panel">
+        <h1 id="name">物件詳細</h1>
+        <div id="rent" class="hero-rent">読み込み中...</div>
+        <div class="detail-grid" id="info"></div>
+    </section>
+
+    <section class="panel">
+        <h2>価格変動履歴</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>変更日時</th>
+                    <th>旧家賃</th>
+                    <th>新家賃</th>
+                    <th>差額</th>
+                </tr>
+            </thead>
+            <tbody id="historyBody">
+                <tr><td colspan="4">読み込み中...</td></tr>
+            </tbody>
+        </table>
+    </section>
+</div>
+<script src="/js/detail.js" defer></script>
+</body>
+</html>
