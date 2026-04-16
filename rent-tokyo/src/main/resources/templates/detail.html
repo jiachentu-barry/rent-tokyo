@@ -10,9 +10,14 @@
 <div class="page-wrap">
     <p><a class="back-link" href="/results">← 検索結果に戻る</a></p>
     <section class="panel">
-        <h1 id="name">物件詳細</h1>
-        <div id="rent" class="hero-rent">読み込み中...</div>
-        <div class="detail-grid" id="info"></div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+            <div>
+                <h1 id="name" style="margin-bottom:4px;">物件詳細</h1>
+                <div id="rent" class="hero-rent">読み込み中...</div>
+            </div>
+            <button id="favBtnDetail" class="fav-btn fav-btn--large">♡ お気に入りに追加</button>
+        </div>
+        <div class="detail-grid" id="info" style="margin-top:14px;"></div>
     </section>
 
     <section class="panel">

@@ -5,6 +5,63 @@ const infoEl = document.getElementById('info');
 const historyBody = document.getElementById('historyBody');
 const initialCostEl = document.getElementById('initialCost');
 const sourceUrlEl = document.getElementById('sourceUrl');
+const favBtnDetail = document.getElementById('favBtnDetail');
+
+// ── Favorite (detail page) ───────────────────────────────────
+function applyDetailFavState(isActive) {
+    if (isActive) {
+        favBtnDetail.classList.add('fav-btn--active');
+        favBtnDetail.textContent = '♥ お気に入り済み（取消）';
+    } else {
+        favBtnDetail.classList.remove('fav-btn--active');
+        favBtnDetail.textContent = '♡ お気に入りに追加';
+    }
+}
+
+async function loadDetailFavState() {
+    const userId = localStorage.getItem('rent_userId');
+    if (!userId || !id || !favBtnDetail) return;
+    try {
+        const list = await fetch('/api/favorites?userId=' + userId).then(r => r.json());
+        const already = list.some(f => String(f.propertyId) === String(id));
+        applyDetailFavState(already);
+    } catch { /* ignore */ }
+}
+
+async function toggleDetailFavorite() {
+    const userId = localStorage.getItem('rent_userId');
+    if (!userId) {
+        alert('お気に入りに追加するにはログインが必要です。\nマイページからログインしてください。');
+        return;
+    }
+    if (!id) return;
+    const isActive = favBtnDetail.classList.contains('fav-btn--active');
+    favBtnDetail.disabled = true;
+    try {
+        if (isActive) {
+            const r = await fetch(`/api/favorites/${id}?userId=${userId}`, { method: 'DELETE' });
+            if (!r.ok) throw new Error();
+            applyDetailFavState(false);
+        } else {
+            const r = await fetch(`/api/favorites?userId=${userId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ propertyId: Number(id) })
+            });
+            if (!r.ok) throw new Error();
+            applyDetailFavState(true);
+        }
+    } catch {
+        alert('操作に失敗しました。');
+    } finally {
+        favBtnDetail.disabled = false;
+    }
+}
+
+if (favBtnDetail) {
+    favBtnDetail.addEventListener('click', toggleDetailFavorite);
+    loadDetailFavState();
+}
 
 function row(label, value) {
     return `<div class="info-item"><div class="label">${label}</div><div class="value">${value ?? '-'}</div></div>`;

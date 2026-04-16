@@ -6,6 +6,66 @@ const compareList = document.getElementById('compareList');
 
 const selectedForCompare = new Map();
 
+// ── Favorite helpers ────────────────────────────────────────
+const FAV_USER_KEY = 'rent_userId';
+const favoritedIds = new Set(); // propertyId set, loaded on init
+
+function getLoggedInUserId() {
+    return localStorage.getItem(FAV_USER_KEY);
+}
+
+async function loadFavoritedIds() {
+    const userId = getLoggedInUserId();
+    if (!userId) return;
+    try {
+        const list = await fetch('/api/favorites?userId=' + userId).then(r => r.json());
+        list.forEach(f => favoritedIds.add(f.propertyId));
+    } catch { /* ignore */ }
+}
+
+function applyFavState(btn, isActive) {
+    if (isActive) {
+        btn.classList.add('fav-btn--active');
+        btn.title = 'お気に入りから削除';
+        btn.textContent = '♥ 収藏済み';
+    } else {
+        btn.classList.remove('fav-btn--active');
+        btn.title = 'お気に入りに追加';
+        btn.textContent = '♡';
+    }
+}
+
+async function toggleFavorite(propertyId, btn) {
+    const userId = getLoggedInUserId();
+    if (!userId) {
+        alert('お気に入りに追加するにはログインが必要です。\nマイページからログインしてください。');
+        return;
+    }
+    const isActive = btn.classList.contains('fav-btn--active');
+    btn.disabled = true;
+    try {
+        if (isActive) {
+            const r = await fetch(`/api/favorites/${propertyId}?userId=${userId}`, { method: 'DELETE' });
+            if (!r.ok) throw new Error();
+            favoritedIds.delete(propertyId);
+            applyFavState(btn, false);
+        } else {
+            const r = await fetch(`/api/favorites?userId=${userId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ propertyId })
+            });
+            if (!r.ok) throw new Error();
+            favoritedIds.add(propertyId);
+            applyFavState(btn, true);
+        }
+    } catch {
+        alert('操作に失敗しました。');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
 function getSearchParams() {
     const params = new URLSearchParams(location.search);
     return {
@@ -104,10 +164,13 @@ async function loadResults() {
             <article class="card">
                 <div class="card-top">
                     <h3>${item.name || '物件名未設定'}</h3>
-                    <label class="compare-check">
-                        <input type="checkbox" data-id="${item.id}">
-                        比較
-                    </label>
+                    <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+                        <button class="fav-btn" data-prop-id="${item.id}" title="お気に入りに追加">♡</button>
+                        <label class="compare-check">
+                            <input type="checkbox" data-id="${item.id}">
+                            比較
+                        </label>
+                    </div>
                 </div>
                 <div class="rent">${yen(item.rent)}</div>
                 <div class="meta">${item.ward || '-'} / ${item.layout || '-'} / 徒歩${item.walkMinutes ?? '-'}分</div>
@@ -116,6 +179,12 @@ async function loadResults() {
                 <div class="actions"><a href="/detail?id=${item.id}">詳細を見る</a></div>
             </article>
         `).join('');
+
+        resultsEl.querySelectorAll('.fav-btn[data-prop-id]').forEach(btn => {
+            const pid = Number(btn.dataset.propId);
+            applyFavState(btn, favoritedIds.has(pid));
+            btn.addEventListener('click', () => toggleFavorite(pid, btn));
+        });
 
         resultsEl.querySelectorAll('input[type="checkbox"][data-id]').forEach((checkbox, index) => {
             const item = items[index];
@@ -149,4 +218,4 @@ pagerEl?.addEventListener('click', event => {
 });
 
 renderCompareList();
-loadResults();
+loadFavoritedIds().then(() => loadResults());

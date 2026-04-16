@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>マイページ – 東京賃貸検索</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<header>
+    <div class="wrap header-row">
+        <div>
+            <h1><a href="/" style="color:inherit;text-decoration:none;">東京賃貸検索</a></h1>
+            <p>マイページ</p>
+        </div>
+        <nav class="header-nav">
+            <a href="/" class="nav-link">検索</a>
+            <a href="/user" class="nav-link nav-link--active">マイページ</a>
+        </nav>
+    </div>
+</header>
+
+<main class="wrap" style="padding:20px 0;">
+
+    <!-- ===== NOT LOGGED IN ===== -->
+    <div id="authSection">
+        <div class="panel" style="max-width:480px;margin:0 auto;">
+            <!-- Tab switcher -->
+            <div class="auth-tabs">
+                <button class="auth-tab auth-tab--active" id="tabLogin" onclick="UserPage.switchAuth('login')">ログイン</button>
+                <button class="auth-tab" id="tabRegister" onclick="UserPage.switchAuth('register')">新規登録</button>
+            </div>
+
+            <!-- Login form -->
+            <form id="loginForm" onsubmit="UserPage.doLogin(event)">
+                <h2 style="margin-bottom:16px;">ログイン</h2>
+                <div style="margin-bottom:12px;">
+                    <label for="loginEmail">メールアドレス</label>
+                    <input id="loginEmail" type="email" placeholder="email@example.com" required>
+                </div>
+                <div style="margin-bottom:16px;">
+                    <label for="loginPassword">パスワード</label>
+                    <input id="loginPassword" type="password" placeholder="パスワード" required>
+                </div>
+                <div id="loginError" class="error-msg" style="display:none;"></div>
+                <button type="submit" id="loginBtn">ログイン</button>
+            </form>
+
+            <!-- Register form -->
+            <form id="registerForm" onsubmit="UserPage.doRegister(event)" style="display:none;">
+                <h2 style="margin-bottom:16px;">新規登録</h2>
+                <div style="margin-bottom:12px;">
+                    <label for="regName">表示名</label>
+                    <input id="regName" type="text" placeholder="山田 太郎" required>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label for="regEmail">メールアドレス</label>
+                    <input id="regEmail" type="email" placeholder="email@example.com" required>
+                </div>
+                <div style="margin-bottom:16px;">
+                    <label for="regPassword">パスワード（8文字以上）</label>
+                    <input id="regPassword" type="password" placeholder="パスワード" required minlength="8">
+                </div>
+                <div id="regError" class="error-msg" style="display:none;"></div>
+                <button type="submit" id="regBtn">登録する</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== LOGGED IN ===== -->
+    <div id="userSection" style="display:none;">
+        <!-- User header bar -->
+        <div class="panel user-bar">
+            <div>
+                <span id="userGreeting" class="user-greeting"></span>
+                <span id="userEmail" class="muted" style="margin-left:8px;font-size:13px;"></span>
+            </div>
+            <button class="btn-sm btn-danger" onclick="UserPage.logout()">ログアウト</button>
+        </div>
+
+        <!-- Tab nav -->
+        <div class="page-tabs">
+            <button class="page-tab page-tab--active" onclick="UserPage.showTab('favorites')">★ お気に入り</button>
+            <button class="page-tab" onclick="UserPage.showTab('history')">🕑 検索履歴</button>
+            <button class="page-tab" onclick="UserPage.showTab('compare')">⇄ 比較</button>
+            <button class="page-tab" onclick="UserPage.showTab('charts')">📊 チャート</button>
+        </div>
+
+        <!-- ===== FAVORITES TAB ===== -->
+        <div id="tab-favorites" class="tab-content panel">
+            <div class="toolbar" style="margin-bottom:12px;">
+                <h2 style="margin:0;">お気に入り物件</h2>
+                <button class="btn-sm" onclick="UserPage.goCompare()">選択した物件を比較</button>
+            </div>
+            <div id="favEmpty" class="empty" style="display:none;">お気に入りはまだありません。</div>
+            <div id="favLoading" class="muted">読み込み中…</div>
+            <div id="favList"></div>
+        </div>
+
+        <!-- ===== HISTORY TAB ===== -->
+        <div id="tab-history" class="tab-content panel" style="display:none;">
+            <h2 style="margin-bottom:12px;">検索履歴</h2>
+            <div id="histEmpty" class="empty" style="display:none;">検索履歴はまだありません。</div>
+            <div id="histLoading" class="muted">読み込み中…</div>
+            <table id="histTable" class="table" style="display:none;">
+                <thead>
+                    <tr>
+                        <th>日時</th>
+                        <th>区</th>
+                        <th>家賃</th>
+                        <th>間取り</th>
+                        <th>徒歩分</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="histBody"></tbody>
+            </table>
+        </div>
+
+        <!-- ===== COMPARE TAB ===== -->
+        <div id="tab-compare" class="tab-content panel" style="display:none;">
+            <h2 style="margin-bottom:12px;">物件比較</h2>
+            <p class="muted" style="font-size:13px;">お気に入りタブで最大3件にチェックを入れて「比較」ボタンを押してください。</p>
+            <div id="compareEmpty" class="empty">比較する物件が選択されていません。</div>
+            <div id="compareTable" style="display:none;overflow-x:auto;">
+                <table class="table compare-side-table" id="compareContent"></table>
+            </div>
+        </div>
+
+        <!-- ===== CHARTS TAB ===== -->
+        <div id="tab-charts" class="tab-content panel" style="display:none;">
+            <h2 style="margin-bottom:12px;">データチャート</h2>
+            <div class="charts-grid">
+                <div class="chart-box">
+                    <h3 class="chart-title">区ごとの平均家賃（お気に入り）</h3>
+                    <div id="chartNoFav" class="empty" style="display:none;">お気に入りデータがありません。</div>
+                    <canvas id="chartWardRent" height="260"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h3 class="chart-title">家賃帯の分布（お気に入り）</h3>
+                    <div id="chartNoDist" class="empty" style="display:none;">お気に入りデータがありません。</div>
+                    <canvas id="chartRentDist" height="260"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h3 class="chart-title">間取り別件数（お気に入り）</h3>
+                    <div id="chartNoLayout" class="empty" style="display:none;">お気に入りデータがありません。</div>
+                    <canvas id="chartLayout" height="260"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/js/user.js"></script>
+</body>
+</html>

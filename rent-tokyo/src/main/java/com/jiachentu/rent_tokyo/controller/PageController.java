@@ -20,4 +20,9 @@ public class PageController {
     public String detail() {
         return "detail";
     }
+
+    @GetMapping("/user")
+    public String user() {
+        return "user";
+    }
 }

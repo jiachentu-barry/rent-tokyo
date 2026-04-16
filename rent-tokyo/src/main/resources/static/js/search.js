@@ -70,7 +70,7 @@ if (wardPanel) {
     });
 }
 
-form?.addEventListener('submit', event => {
+form?.addEventListener('submit', async event => {
     event.preventDefault();
 
     const params = new URLSearchParams();
@@ -81,6 +81,25 @@ form?.addEventListener('submit', event => {
         params.set(el.name, el.value);
     }
     params.set('page', '0');
+
+    // ── 保存搜索历史（已登录时）────────────────────────────────
+    const userId = localStorage.getItem('rent_userId');
+    if (userId) {
+        const body = {
+            ward:           params.get('ward')           || null,
+            rentMin:        params.get('rentMin')        ? Number(params.get('rentMin'))        : null,
+            rentMax:        params.get('rentMax')        ? Number(params.get('rentMax'))        : null,
+            layout:         params.get('layout')         || null,
+            walkMinutesMax: params.get('walkMinutesMax') ? Number(params.get('walkMinutesMax')) : null
+        };
+        try {
+            await fetch('/api/search-histories?userId=' + userId, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+        } catch { /* 保存失败不阻断跳转 */ }
+    }
 
     location.href = '/results?' + params.toString();
 });
